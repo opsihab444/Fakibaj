@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { getSubjects } from '../data/mockData';
+import { getSubjects } from '../data/studyData';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import {
     BookOpen, Sparkles, Atom, FlaskConical, Leaf, Calculator,

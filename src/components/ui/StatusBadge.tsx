@@ -1,4 +1,4 @@
-import type { Status } from '../../data/mockData';
+import type { Status } from '../../data/studyData';
 import { CheckCircle2, Circle, PlayCircle } from 'lucide-react';
 
 interface StatusBadgeProps {
@@ -36,7 +36,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, showIcon = tru
     };
 
     return (
-        <span 
+        <span
             className={`status-badge status-${status}`}
             style={getStyle()}
         >

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDashboardStats, getSubjects, getActivityChartData, getStreakData } from '../data/mockData';
+import { getDashboardStats, getSubjects, getActivityChartData, getStreakData } from '../data/studyData';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { Target, TrendingUp, Award, Flame, Clock, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';

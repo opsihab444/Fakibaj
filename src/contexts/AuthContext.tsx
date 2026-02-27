@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { initializeDataFromSupabase, clearUserData } from '../data/mockData';
+import { setCurrentUserId, reinitializeData } from '../data/studyData';
 
 interface AuthContextType {
     user: User | null;
@@ -26,13 +26,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     const syncUserData = async (u: User | null) => {
-        if (u) {
-            // Load user's progress from Supabase
-            await initializeDataFromSupabase(u.id);
-        } else {
-            // Clear cached data on logout
-            clearUserData();
-        }
+        setCurrentUserId(u?.id ?? null);
+        await reinitializeData();
     };
 
     useEffect(() => {
