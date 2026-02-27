@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
-import type { Status } from '../data/mockData';
+
+// Define Status here to avoid circular dependency with mockData
+type Status = 'not_started' | 'ongoing' | 'finished';
 
 // =============================================
 // Supabase Data Service

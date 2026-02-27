@@ -191,7 +191,11 @@ export const mockTopics = allTopics;
  */
 export async function initializeDataFromSupabase(userId: string): Promise<void> {
   setCurrentUserId(userId);
-  await loadStatusesFromSupabase(userId);
+  try {
+    await loadStatusesFromSupabase(userId);
+  } catch (err) {
+    console.error('Failed to load from Supabase, using defaults:', err);
+  }
   // Rebuild static data with loaded statuses
   buildStaticData();
 }
