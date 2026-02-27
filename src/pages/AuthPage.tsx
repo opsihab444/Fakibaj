@@ -4,6 +4,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, Target, CheckCircle } from 'lucide-react';
 import { LogoIcon } from '../components/ui/LogoIcon';
 
+const InputField = ({ icon: Icon, type, placeholder, value, onChange, label, extra, actionIcon: ActionIcon, onAction, isMobile }: any) => (
+    <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+            <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{label}</label>
+            {extra && extra}
+        </div>
+        <div style={{ position: 'relative' }}>
+            <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', zIndex: 2 }} />
+            <input
+                type={type} placeholder={placeholder} value={value} onChange={onChange} required
+                style={{
+                    width: '100%', padding: isMobile ? '0.9rem 2.8rem 0.9rem 3rem' : '1.1rem 3rem 1.1rem 3rem',
+                    background: 'rgba(20, 20, 28, 0.6)', border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '16px', color: 'white', fontSize: isMobile ? '0.9rem' : '1rem',
+                    outline: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
+                    letterSpacing: type === 'password' ? '2px' : 'normal'
+                }}
+                onFocus={(e) => {
+                    e.target.style.background = 'rgba(255,255,255,0.05)';
+                    e.target.style.borderColor = 'rgba(16,185,129,0.5)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(16,185,129,0.1), inset 0 2px 4px rgba(0,0,0,0.2)'
+                }}
+                onBlur={(e) => {
+                    e.target.style.background = 'rgba(20, 20, 28, 0.6)';
+                    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
+                    e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                }}
+            />
+            {ActionIcon && (
+                <button type="button" onClick={onAction} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0, display: 'flex' }}>
+                    <ActionIcon size={18} />
+                </button>
+            )}
+        </div>
+    </div>
+);
+
 export const AuthPage = () => {
     const { signIn, signUp } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
@@ -90,43 +128,6 @@ export const AuthPage = () => {
         })
     } as any;
 
-    const InputField = ({ icon: Icon, type, placeholder, value, onChange, label, extra, actionIcon: ActionIcon, onAction }: any) => (
-        <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{label}</label>
-                {extra && extra}
-            </div>
-            <div style={{ position: 'relative' }}>
-                <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', zIndex: 2 }} />
-                <input
-                    type={type} placeholder={placeholder} value={value} onChange={onChange} required
-                    style={{
-                        width: '100%', padding: isMobile ? '0.9rem 2.8rem 0.9rem 3rem' : '1.1rem 3rem 1.1rem 3rem',
-                        background: 'rgba(20, 20, 28, 0.6)', border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '16px', color: 'white', fontSize: isMobile ? '0.9rem' : '1rem',
-                        outline: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
-                        letterSpacing: type === 'password' ? '2px' : 'normal'
-                    }}
-                    onFocus={(e) => {
-                        e.target.style.background = 'rgba(255,255,255,0.05)';
-                        e.target.style.borderColor = 'rgba(16,185,129,0.5)';
-                        e.target.style.boxShadow = '0 0 0 4px rgba(16,185,129,0.1), inset 0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onBlur={(e) => {
-                        e.target.style.background = 'rgba(20, 20, 28, 0.6)';
-                        e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-                        e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                />
-                {ActionIcon && (
-                    <button type="button" onClick={onAction} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0, display: 'flex' }}>
-                        <ActionIcon size={18} />
-                    </button>
-                )}
-            </div>
-        </div>
-    );
 
     return (
         <div style={{
@@ -292,12 +293,12 @@ export const AuthPage = () => {
                                         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>আপনার পড়াশোনার গিয়ার আপ করুন।</p>
                                     </div>
 
-                                    <InputField icon={Mail} type="email" placeholder="example@email.com" label="ইমেইল অ্যাড্রেস" value={loginEmail} onChange={(e: any) => setLoginEmail(e.target.value)} />
+                                    <InputField icon={Mail} type="email" placeholder="example@email.com" label="ইমেইল অ্যাড্রেস" value={loginEmail} onChange={(e: any) => setLoginEmail(e.target.value)} isMobile={isMobile} />
 
                                     <InputField
                                         icon={Lock} type={showPass ? 'text' : 'password'} placeholder="••••••••" label="পাসওয়ার্ড" value={loginPassword} onChange={(e: any) => setLoginPassword(e.target.value)}
                                         extra={<span style={{ fontSize: '0.8rem', color: '#10b981', cursor: 'pointer', fontWeight: 600 }}>ভুলে গেছেন?</span>}
-                                        actionIcon={showPass ? EyeOff : Eye} onAction={() => setShowPass(!showPass)}
+                                        actionIcon={showPass ? EyeOff : Eye} onAction={() => setShowPass(!showPass)} isMobile={isMobile}
                                     />
 
                                     <motion.button
@@ -322,13 +323,13 @@ export const AuthPage = () => {
                                         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>নতুন অ্যাকাউন্ট তৈরি করে যাত্রা শুরু করুন।</p>
                                     </div>
 
-                                    <InputField icon={User} type="text" placeholder="আপনার নাম" label="সম্পূর্ণ নাম" value={regName} onChange={(e: any) => setRegName(e.target.value)} />
+                                    <InputField icon={User} type="text" placeholder="আপনার নাম" label="সম্পূর্ণ নাম" value={regName} onChange={(e: any) => setRegName(e.target.value)} isMobile={isMobile} />
 
-                                    <InputField icon={Mail} type="email" placeholder="example@email.com" label="ইমেইল অ্যাড্রেস" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} />
+                                    <InputField icon={Mail} type="email" placeholder="example@email.com" label="ইমেইল অ্যাড্রেস" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} isMobile={isMobile} />
 
                                     <InputField
                                         icon={Lock} type={showPass ? 'text' : 'password'} placeholder="••••••••" label="নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)" value={regPassword} onChange={(e: any) => setRegPassword(e.target.value)}
-                                        actionIcon={showPass ? EyeOff : Eye} onAction={() => setShowPass(!showPass)}
+                                        actionIcon={showPass ? EyeOff : Eye} onAction={() => setShowPass(!showPass)} isMobile={isMobile}
                                     />
 
                                     <motion.button
