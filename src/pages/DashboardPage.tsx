@@ -57,8 +57,8 @@ export const DashboardPage = () => {
     }, []);
 
     // Custom modern SVG icons
-    const SubjectsIcon = ({ color }: { color: string }) => (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    const SubjectsIcon = ({ color, style }: { color: string, style?: React.CSSProperties }) => (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
             <rect x="3" y="3" width="8" height="8" rx="2.5" stroke={color} strokeWidth="1.5" />
             <rect x="13" y="3" width="8" height="8" rx="2.5" stroke={color} strokeWidth="1.5" opacity="0.6" />
             <rect x="3" y="13" width="8" height="8" rx="2.5" stroke={color} strokeWidth="1.5" opacity="0.6" />
@@ -66,8 +66,8 @@ export const DashboardPage = () => {
         </svg>
     );
 
-    const ChaptersIcon = ({ color }: { color: string }) => (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    const ChaptersIcon = ({ color, style }: { color: string, style?: React.CSSProperties }) => (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
             <path d="M4 18V6C4 4.9 4.9 4 6 4H18C19.1 4 20 4.9 20 6V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
             <path d="M4 8H20" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
             <path d="M9 4V20" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
@@ -76,16 +76,16 @@ export const DashboardPage = () => {
         </svg>
     );
 
-    const CompletedIcon = ({ color }: { color: string }) => (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    const CompletedIcon = ({ color, style }: { color: string, style?: React.CSSProperties }) => (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
             <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5" />
             <circle cx="12" cy="12" r="5" stroke={color} strokeWidth="1.2" opacity="0.4" fill={color} fillOpacity="0.08" />
             <path d="M9 12.5L11 14.5L15.5 9.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     );
 
-    const RemainingIcon = ({ color }: { color: string }) => (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    const RemainingIcon = ({ color, style }: { color: string, style?: React.CSSProperties }) => (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
             <path d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 2" />
             <path d="M12 7V12L15 15" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             <circle cx="19" cy="5" r="2.5" fill={color} fillOpacity="0.3" stroke={color} strokeWidth="1.2" />
