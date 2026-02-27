@@ -17,8 +17,8 @@ export const WebLayout = () => {
 
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-    // Exam countdown logic: March 21, 2026 at 10:00 AM
-    const targetDate = new Date('2026-03-21T10:00:00');
+    // Exam countdown logic: April 21, 2026 at 10:00 AM
+    const targetDate = new Date('2026-04-21T10:00:00');
 
     const calculateTimeLeft = () => {
         const difference = targetDate.getTime() - new Date().getTime();
@@ -278,7 +278,7 @@ export const WebLayout = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0 1.5rem',
+                    padding: isMobile ? '0 0.75rem' : '0 1.5rem',
                     background: 'rgba(5, 5, 8, 0.8)',
                     backdropFilter: 'blur(12px)',
                     borderBottom: '1px solid var(--glass-border)',
@@ -286,12 +286,12 @@ export const WebLayout = () => {
                     top: 0,
                     zIndex: 40
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1rem' }}>
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             style={{
                                 background: 'transparent', border: 'none',
-                                color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.5rem',
+                                color: 'var(--text-secondary)', cursor: 'pointer', padding: isMobile ? '0.25rem' : '0.5rem',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 transition: 'color 0.2s ease'
                             }}
@@ -330,19 +330,19 @@ export const WebLayout = () => {
                             display: 'flex', alignItems: 'center', gap: '0.4rem',
                             background: 'rgba(16, 185, 129, 0.08)',
                             border: '1px solid rgba(16, 185, 129, 0.2)',
-                            padding: '0.4rem 0.8rem',
+                            padding: isMobile ? '0.3rem 0.5rem' : '0.4rem 0.8rem',
                             borderRadius: '99px',
                             color: '#10b981',
-                            fontSize: '0.8rem',
+                            fontSize: isMobile ? '0.75rem' : '0.8rem',
                             fontWeight: 700,
                             whiteSpace: 'nowrap',
                             marginLeft: isMobile ? 0 : '1rem'
                         }}>
-                            <Target size={14} /> এসএসসি ২০২৬: {timeLeft.days.toLocaleString('bn-BD')} দিন {timeLeft.hours.toLocaleString('bn-BD')} ঘণ্টা
+                            <Target size={isMobile ? 12 : 14} /> {isMobile ? '' : 'এসএসসি ২০২৬: '}{timeLeft.days.toLocaleString('bn-BD')} দিন {timeLeft.hours.toLocaleString('bn-BD')} ঘণ্টা
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1.25rem' }}>
                         {isMobile && <Search size={20} color="var(--text-secondary)" />}
                         <button
                             onClick={() => navigate('/notifications')}

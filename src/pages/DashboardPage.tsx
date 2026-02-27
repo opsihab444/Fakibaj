@@ -24,8 +24,8 @@ export const DashboardPage = () => {
     const activityData = getActivityChartData(7);
     const streakData = getStreakData();
 
-    // Exam countdown logic: March 21, 2026 at 10:00 AM
-    const targetDate = new Date('2026-03-21T10:00:00');
+    // Exam countdown logic: April 21, 2026 at 10:00 AM
+    const targetDate = new Date('2026-04-21T10:00:00');
     const calculateTimeLeft = () => {
         const difference = targetDate.getTime() - new Date().getTime();
         if (difference > 0) {
@@ -171,16 +171,17 @@ export const DashboardPage = () => {
             <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
                 {/* Quick Stats Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                     {quickStats.map((stat, i) => (
                         <motion.div key={i} variants={fadeUp} className="glass-panel"
                             style={{
-                                padding: '1.5rem',
+                                padding: isMobile ? '1rem' : '1.5rem',
                                 position: 'relative',
                                 overflow: 'hidden',
                                 display: 'flex',
+                                flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: '1.5rem',
+                                gap: isMobile ? '0.75rem' : '1.5rem',
                                 cursor: 'default',
                                 border: '1px solid rgba(255, 255, 255, 0.03)',
                                 background: `linear-gradient(135deg, rgba(12,12,18,0.7) 0%, rgba(12,12,18,0.4) 100%)`,
@@ -202,26 +203,26 @@ export const DashboardPage = () => {
 
                             <div style={{ zIndex: 1, flexShrink: 0 }}>
                                 <div style={{
-                                    width: '60px', height: '60px', borderRadius: '20px',
+                                    width: isMobile ? '40px' : '60px', height: isMobile ? '40px' : '60px', borderRadius: isMobile ? '12px' : '20px',
                                     background: `${stat.color}08`, color: stat.color,
                                     border: `1px solid ${stat.color}30`,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     boxShadow: `0 4px 20px -5px ${stat.color}30`
                                 }}>
-                                    <stat.icon color={stat.color} />
+                                    {isMobile ? <stat.icon color={stat.color} style={{ transform: 'scale(0.8)' }} /> : <stat.icon color={stat.color} />}
                                 </div>
                             </div>
 
-                            <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
-                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: isMobile ? '0rem' : '0.2rem', minWidth: 0, width: '100%' }}>
+                                <span style={{ fontSize: isMobile ? '0.75rem' : '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {stat.label}
                                 </span>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'white', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: isMobile ? '1.3rem' : '2.2rem', fontWeight: 800, color: 'white', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
                                         {stat.value}
                                     </span>
                                     {stat.sub && (
-                                        <span style={{ fontSize: '0.85rem', color: stat.color, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                        <span style={{ fontSize: isMobile ? '0.65rem' : '0.85rem', color: stat.color, fontWeight: 700, whiteSpace: 'nowrap' }}>
                                             {stat.sub}
                                         </span>
                                     )}
