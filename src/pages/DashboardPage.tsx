@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDashboardStats, getSubjects, getActivityChartData, getStreakData } from '../data/mockData';
 import { ProgressBar } from '../components/ui/ProgressBar';
-import { Layers, CheckCircle, Target, TrendingUp, Award, BookOpen, Flame, Clock, Zap, FileText } from 'lucide-react';
+import { Target, TrendingUp, Award, Flame, Clock, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { Variants } from 'framer-motion';
@@ -290,7 +290,7 @@ export const DashboardPage = () => {
                                         <Tooltip
                                             contentStyle={{ backgroundColor: 'rgba(15,15,20,0.95)', border: '1px solid var(--glass-border)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontSize: '0.85rem' }}
                                             itemStyle={{ color: '#34d399', fontWeight: 700 }}
-                                            formatter={(value: number) => [`${value} টি টপিক`, 'সম্পন্ন']}
+                                            formatter={(value: any) => [`${value} টি টপিক`, 'সম্পন্ন']}
                                             cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                                         />
                                         <Bar dataKey="completed" radius={[6, 6, 0, 0]} maxBarSize={40}>
