@@ -1,4 +1,12 @@
 import syllabusRaw from '../../database/data.json' with { type: 'json' };
+import {
+  loadStatusesFromSupabase,
+  saveStatusToSupabase,
+  recordActivityToSupabase,
+  loadActivityFromSupabase,
+  getCachedStatuses,
+  resetCache,
+} from '../lib/supabaseData';
 
 // ============================================
 // Types
@@ -55,7 +63,7 @@ const subjectMeta: Record<string, { icon: string; color: string }> = {
 };
 
 // ============================================
-// Per-user localStorage helpers
+// Current user tracking
 // ============================================
 let currentUserId: string | null = null;
 
@@ -65,22 +73,6 @@ export function setCurrentUserId(uid: string | null) {
 
 export function getCurrentUserId(): string | null {
   return currentUserId;
-}
-
-function getUserKey(base: string): string {
-  return currentUserId ? `${base}_${currentUserId}` : base;
-}
-
-function loadSavedStatuses(): Record<string, Status> {
-  try {
-    const raw = localStorage.getItem(getUserKey('ssc2026_topic_status'));
-    if (raw) return JSON.parse(raw) as Record<string, Status>;
-  } catch { /* ignore */ }
-  return {};
-}
-
-function saveStatuses(statuses: Record<string, Status>) {
-  localStorage.setItem(getUserKey('ssc2026_topic_status'), JSON.stringify(statuses));
 }
 
 // ============================================
@@ -101,119 +93,123 @@ interface JsonSubject {
 const jsonData = syllabusRaw as { syllabus: JsonSubject[] };
 
 // --- Generate all topics ---
-const savedStatuses = loadSavedStatuses();
 const allTopics: Topic[] = [];
 const allChapters: Chapter[] = [];
 const allSubjects: Subject[] = [];
 
-jsonData.syllabus.forEach((subj, si) => {
-  const subjectId = `s${si + 1}`;
-  let totalSubjectTopics = 0;
-  let completedSubjectTopics = 0;
+function buildStaticData() {
+  // Clear arrays
+  allTopics.length = 0;
+  allChapters.length = 0;
+  allSubjects.length = 0;
 
-  subj.chapters.forEach((ch, ci) => {
-    const chapterId = `${subjectId}_c${ci + 1}`;
-    let completedInChapter = 0;
+  const savedStatuses = getCachedStatuses();
 
-    ch.topics.forEach((topicTitle, ti) => {
-      const topicId = `${chapterId}_t${ti + 1}`;
-      const status: Status = savedStatuses[topicId] || 'not_started';
+  jsonData.syllabus.forEach((subj, si) => {
+    const subjectId = `s${si + 1}`;
+    let totalSubjectTopics = 0;
+    let completedSubjectTopics = 0;
 
-      allTopics.push({
-        id: topicId,
-        chapterId,
-        title: topicTitle,
-        type: 'reading',
-        status,
+    subj.chapters.forEach((ch, ci) => {
+      const chapterId = `${subjectId}_c${ci + 1}`;
+      let completedInChapter = 0;
+
+      ch.topics.forEach((topicTitle, ti) => {
+        const topicId = `${chapterId}_t${ti + 1}`;
+        const status: Status = savedStatuses[topicId] || 'not_started';
+
+        allTopics.push({
+          id: topicId,
+          chapterId,
+          title: topicTitle,
+          type: 'reading',
+          status,
+        });
+
+        if (status === 'finished') {
+          completedInChapter++;
+          completedSubjectTopics++;
+        }
+        totalSubjectTopics++;
       });
 
-      if (status === 'finished') {
-        completedInChapter++;
-        completedSubjectTopics++;
-      }
-      totalSubjectTopics++;
+      const chapterStatus: Status =
+        completedInChapter === ch.topics.length && ch.topics.length > 0
+          ? 'finished'
+          : completedInChapter > 0
+            ? 'ongoing'
+            : 'not_started';
+
+      allChapters.push({
+        id: chapterId,
+        subjectId,
+        title: ch.chapter_name,
+        order: ci + 1,
+        totalTopics: ch.topics.length,
+        completedTopics: completedInChapter,
+        status: chapterStatus,
+        description: `${subj.subject_name} — ${ch.chapter_name} এর সকল টপিক।`,
+      });
     });
 
-    const chapterStatus: Status =
-      completedInChapter === ch.topics.length && ch.topics.length > 0
-        ? 'finished'
-        : completedInChapter > 0
-          ? 'ongoing'
-          : 'not_started';
+    const meta = subjectMeta[subj.subject_code] || { icon: 'BookOpen', color: '#a855f7' };
+    const completedChapters = allChapters.filter(
+      (c) => c.subjectId === subjectId && c.status === 'finished'
+    ).length;
+    const totalChapters = subj.chapters.length;
+    const progress = totalSubjectTopics > 0
+      ? Math.round((completedSubjectTopics / totalSubjectTopics) * 100)
+      : 0;
 
-    allChapters.push({
-      id: chapterId,
-      subjectId,
-      title: ch.chapter_name,
-      order: ci + 1,
-      totalTopics: ch.topics.length,
-      completedTopics: completedInChapter,
-      status: chapterStatus,
-      description: `${subj.subject_name} — ${ch.chapter_name} এর সকল টপিক।`,
+    allSubjects.push({
+      id: subjectId,
+      title: subj.subject_name,
+      code: subj.subject_code,
+      description: `এসএসসি ২০২৬ শর্ট সিলেবাস অনুযায়ী ${subj.subject_name} এর সকল অধ্যায় ও টপিক।`,
+      icon: meta.icon,
+      totalChapters,
+      completedChapters,
+      progress,
+      color: meta.color,
     });
   });
+}
 
-  const meta = subjectMeta[subj.subject_code] || { icon: 'BookOpen', color: '#a855f7' };
-  const completedChapters = allChapters.filter(
-    (c) => c.subjectId === subjectId && c.status === 'finished'
-  ).length;
-  const totalChapters = subj.chapters.length;
-  const progress = totalSubjectTopics > 0
-    ? Math.round((completedSubjectTopics / totalSubjectTopics) * 100)
-    : 0;
-
-  allSubjects.push({
-    id: subjectId,
-    title: subj.subject_name,
-    code: subj.subject_code,
-    description: `এসএসসি ২০২৬ শর্ট সিলেবাস অনুযায়ী ${subj.subject_name} এর সকল অধ্যায় ও টপিক।`,
-    icon: meta.icon,
-    totalChapters,
-    completedChapters,
-    progress,
-    color: meta.color,
-  });
-});
+// Initial build with empty statuses
+buildStaticData();
 
 // ============================================
-// Public Exports (same API as before)
+// Public Exports
 // ============================================
 export const mockSubjects = allSubjects;
 export const mockChapters = allChapters;
 export const mockTopics = allTopics;
 
 /**
- * Reload all topic statuses from localStorage for the current user.
- * Call this whenever the user changes (login/logout).
+ * Initialize data from Supabase for the current user.
+ * Call this on login.
+ */
+export async function initializeDataFromSupabase(userId: string): Promise<void> {
+  setCurrentUserId(userId);
+  await loadStatusesFromSupabase(userId);
+  // Rebuild static data with loaded statuses
+  buildStaticData();
+}
+
+/**
+ * Reload all topic statuses (for logout/switch user).
  */
 export function reinitializeData() {
-  const saved = loadSavedStatuses();
+  buildStaticData();
+}
 
-  // Reset all topics
-  allTopics.forEach((t) => {
-    t.status = saved[t.id] || 'not_started';
-  });
-
-  // Recalculate chapters
-  allChapters.forEach((ch) => {
-    const chapTopics = allTopics.filter((t) => t.chapterId === ch.id);
-    ch.completedTopics = chapTopics.filter((t) => t.status === 'finished').length;
-    ch.status =
-      ch.completedTopics === ch.totalTopics && ch.totalTopics > 0
-        ? 'finished'
-        : ch.completedTopics > 0
-          ? 'ongoing'
-          : 'not_started';
-  });
-
-  // Recalculate subjects
-  allSubjects.forEach((subj) => {
-    const subjChapters = allChapters.filter((c) => c.subjectId === subj.id);
-    subj.completedChapters = subjChapters.filter((c) => c.status === 'finished').length;
-    const subjTopics = allTopics.filter((t) => subjChapters.some((c) => c.id === t.chapterId));
-    const completed = subjTopics.filter((t) => t.status === 'finished').length;
-    subj.progress = subjTopics.length > 0 ? Math.round((completed / subjTopics.length) * 100) : 0;
-  });
+/**
+ * Clear user data cache (for logout).
+ */
+export function clearUserData() {
+  resetCache();
+  setCurrentUserId(null);
+  buildStaticData();
 }
 
 export const getSubjects = () => allSubjects;
@@ -224,26 +220,23 @@ export const getChapterById = (id: string) => allChapters.find((c) => c.id === i
 export const getTopicsByChapter = (chapterId: string) =>
   allTopics.filter((t) => t.chapterId === chapterId);
 
-// Update a topic status & persist to localStorage
+// Update a topic status & persist to Supabase
 export const updateTopicStatus = (topicId: string, newStatus: Status) => {
   const topic = allTopics.find((t) => t.id === topicId);
   if (topic) {
     const wasFinished = topic.status === 'finished';
     topic.status = newStatus;
-    // Save to localStorage
-    const current = loadSavedStatuses();
-    if (newStatus === 'not_started') {
-      delete current[topicId];
-    } else {
-      current[topicId] = newStatus;
-    }
-    saveStatuses(current);
 
-    // Track activity: record a completion event
-    if (newStatus === 'finished' && !wasFinished) {
-      recordActivity(1);
-    } else if (newStatus !== 'finished' && wasFinished) {
-      recordActivity(-1);
+    // Save to Supabase (async, fire-and-forget for fast UI)
+    if (currentUserId) {
+      saveStatusToSupabase(currentUserId, topicId, newStatus);
+
+      // Track activity
+      if (newStatus === 'finished' && !wasFinished) {
+        recordActivityToSupabase(currentUserId, 1);
+      } else if (newStatus !== 'finished' && wasFinished) {
+        recordActivityToSupabase(currentUserId, -1);
+      }
     }
 
     // Recalculate chapter stats
@@ -301,58 +294,26 @@ export const getDashboardStats = () => {
 
 // ============================================
 // Activity Tracking & Streak System
+// (Now Supabase-backed)
 // ============================================
-
-interface DailyActivity {
-  date: string;      // YYYY-MM-DD
-  completed: number; // topics completed that day
-}
-
-function getDateStr(d: Date = new Date()): string {
-  return d.toISOString().split('T')[0];
-}
-
-function loadActivityLog(): DailyActivity[] {
-  try {
-    const raw = localStorage.getItem(getUserKey('ssc2026_activity_log'));
-    if (raw) return JSON.parse(raw) as DailyActivity[];
-  } catch { /* ignore */ }
-  return [];
-}
-
-function saveActivityLog(log: DailyActivity[]) {
-  localStorage.setItem(getUserKey('ssc2026_activity_log'), JSON.stringify(log));
-}
-
-function recordActivity(delta: number) {
-  const log = loadActivityLog();
-  const today = getDateStr();
-  const existing = log.find((e) => e.date === today);
-  if (existing) {
-    existing.completed = Math.max(0, existing.completed + delta);
-  } else if (delta > 0) {
-    log.push({ date: today, completed: delta });
-  }
-  // Keep only last 30 days
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const cutoffStr = getDateStr(cutoff);
-  const filtered = log.filter((e) => e.date >= cutoffStr);
-  saveActivityLog(filtered);
-}
 
 /**
  * Returns last N days activity for chart display
+ * Now loads from Supabase
  */
-export function getActivityChartData(days: number = 7): { name: string; completed: number }[] {
-  const log = loadActivityLog();
-  const result: { name: string; completed: number }[] = [];
+export async function getActivityChartDataAsync(days: number = 7): Promise<{ name: string; completed: number }[]> {
   const dayNames = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহ', 'শুক্র', 'শনি'];
+  const result: { name: string; completed: number }[] = [];
+
+  let log: { date: string; completed: number }[] = [];
+  if (currentUserId) {
+    log = await loadActivityFromSupabase(currentUserId);
+  }
 
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = getDateStr(d);
+    const dateStr = d.toISOString().split('T')[0];
     const entry = log.find((e) => e.date === dateStr);
     result.push({
       name: dayNames[d.getDay()],
@@ -363,16 +324,52 @@ export function getActivityChartData(days: number = 7): { name: string; complete
 }
 
 /**
- * Returns streak info: current streak count and this week's day activity
+ * Sync version for backward compat - uses cached/localStorage data
+ */
+export function getActivityChartData(days: number = 7): { name: string; completed: number }[] {
+  const dayNames = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহ', 'শুক্র', 'শনি'];
+  const result: { name: string; completed: number }[] = [];
+
+  let log: { date: string; completed: number }[] = [];
+  if (currentUserId) {
+    try {
+      const raw = localStorage.getItem(`ssc2026_activity_log_${currentUserId}`);
+      if (raw) log = JSON.parse(raw);
+    } catch { /* ignore */ }
+  }
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const entry = log.find((e) => e.date === dateStr);
+    result.push({
+      name: dayNames[d.getDay()],
+      completed: entry ? entry.completed : 0,
+    });
+  }
+  return result;
+}
+
+/**
+ * Returns streak info
  */
 export function getStreakData(): { streak: number; weekDays: { label: string; active: boolean }[] } {
-  const log = loadActivityLog();
+  let log: { date: string; completed: number }[] = [];
+  if (currentUserId) {
+    try {
+      const raw = localStorage.getItem(`ssc2026_activity_log_${currentUserId}`);
+      if (raw) log = JSON.parse(raw);
+    } catch { /* ignore */ }
+  }
+
   const logDates = new Set(log.filter((e) => e.completed > 0).map((e) => e.date));
+
+  const getDateStr = (d: Date) => d.toISOString().split('T')[0];
 
   // Calculate consecutive streak ending today or yesterday
   let streak = 0;
   const checkDate = new Date();
-  // If the user hasn't done anything today, start checking from yesterday
   if (!logDates.has(getDateStr(checkDate))) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
@@ -385,8 +382,7 @@ export function getStreakData(): { streak: number; weekDays: { label: string; ac
   // Build this week's activity (Mon–Sun)
   const weekLabels = ['সো', 'ম', 'বু', 'বৃ', 'শু', 'শ', 'র'];
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun
-  // Find Monday of this week
+  const dayOfWeek = today.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const monday = new Date(today);
   monday.setDate(today.getDate() + mondayOffset);
