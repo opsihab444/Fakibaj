@@ -1,4 +1,5 @@
 import syllabusRaw from '../../database/data.json' with { type: 'json' };
+import { supabase } from '../lib/supabase';
 
 // ============================================
 // Types
@@ -239,6 +240,18 @@ export const updateTopicStatus = (topicId: string, newStatus: Status) => {
         }
         saveStatuses(current);
 
+        // Background Sync to Supabase
+        if (currentUserId) {
+            supabase.from('user_topic_status').upsert({
+                user_id: currentUserId,
+                topic_id: topicId,
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id, topic_id' }).then(({ error }) => {
+                if (error) console.error('Failed to sync topic status:', error);
+            });
+        }
+
         // Track activity: record a completion event
         if (newStatus === 'finished' && !wasFinished) {
             recordActivity(1);
@@ -339,6 +352,21 @@ function recordActivity(delta: number) {
     const cutoffStr = getDateStr(cutoff);
     const filtered = log.filter((e) => e.date >= cutoffStr);
     saveActivityLog(filtered);
+
+    // Background Sync to Supabase
+    if (currentUserId) {
+        const todayEntry = existing || log.find((e) => e.date === today);
+        if (todayEntry) {
+            supabase.from('user_activity_log').upsert({
+                user_id: currentUserId,
+                date: today,
+                completed_count: todayEntry.completed,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id, date' }).then(({ error }) => {
+                if (error) console.error('Failed to sync activity log:', error);
+            });
+        }
+    }
 }
 
 /**
@@ -402,3 +430,78 @@ export function getStreakData(): { streak: number; weekDays: { label: string; ac
 
     return { streak, weekDays };
 }
+
+// ============================================
+// Sync Initial Remote Data
+// ============================================
+
+export async function syncRemoteData() {
+    if (!currentUserId) return;
+
+    try {
+        // Fetch remote topic statuses
+        const { data: remoteStatuses, error: statusError } = await supabase
+            .from('user_topic_status')
+            .select('topic_id, status')
+            .eq('user_id', currentUserId);
+
+        if (statusError) {
+            console.error('Failed to fetch remote topic statuses:', statusError);
+        } else if (remoteStatuses && remoteStatuses.length > 0) {
+            // Update local storage
+            const localStatuses = loadSavedStatuses();
+            let changed = false;
+            remoteStatuses.forEach((row) => {
+                if (localStatuses[row.topic_id] !== row.status) {
+                    localStatuses[row.topic_id] = row.status as Status;
+                    changed = true;
+                }
+            });
+            if (changed) {
+                saveStatuses(localStatuses);
+            }
+        }
+
+        // Fetch remote activity logs
+        const { data: remoteLogs, error: logError } = await supabase
+            .from('user_activity_log')
+            .select('date, completed_count')
+            .eq('user_id', currentUserId);
+
+        if (logError) {
+            console.error('Failed to fetch remote activity logs:', logError);
+        } else if (remoteLogs && remoteLogs.length > 0) {
+            const localLogs = loadActivityLog();
+            let changed = false;
+            remoteLogs.forEach(row => {
+                const existingIndex = localLogs.findIndex(l => l.date === row.date);
+                if (existingIndex >= 0) {
+                    if (localLogs[existingIndex].completed !== row.completed_count) {
+                        localLogs[existingIndex].completed = row.completed_count;
+                        changed = true;
+                    }
+                } else {
+                    localLogs.push({ date: row.date, completed: row.completed_count });
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                // sort and filter local logs
+                localLogs.sort((a, b) => a.date.localeCompare(b.date));
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - 30);
+                const cutoffStr = getDateStr(cutoff);
+                const filtered = localLogs.filter((e) => e.date >= cutoffStr);
+                saveActivityLog(filtered);
+            }
+        }
+
+        // Reinitialize the memory state with the updated local storage
+        reinitializeData();
+
+    } catch (e) {
+        console.error('Exception during syncRemoteData:', e);
+    }
+}
+

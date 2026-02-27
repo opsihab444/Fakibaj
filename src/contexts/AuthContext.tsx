@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { setCurrentUserId, reinitializeData } from '../data/mockData';
+import { setCurrentUserId, reinitializeData, syncRemoteData } from '../data/mockData';
 
 interface AuthContextType {
     user: User | null;
@@ -25,9 +25,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const syncUserData = (u: User | null) => {
+    const syncUserData = async (u: User | null) => {
         setCurrentUserId(u?.id ?? null);
         reinitializeData();
+        if (u) {
+            await syncRemoteData();
+        }
     };
 
     useEffect(() => {
@@ -35,8 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
-            syncUserData(session?.user ?? null);
-            setLoading(false);
+            syncUserData(session?.user ?? null).finally(() => setLoading(false));
         });
 
         // Listen for auth changes
@@ -44,8 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             (_event, session) => {
                 setSession(session);
                 setUser(session?.user ?? null);
-                syncUserData(session?.user ?? null);
-                setLoading(false);
+                syncUserData(session?.user ?? null).finally(() => setLoading(false));
             }
         );
 
