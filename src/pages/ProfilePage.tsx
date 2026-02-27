@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Calendar, Shield, LogOut, ChevronRight, BookOpen, Target, Award, Clock, Camera, Trash2, Edit3, CheckCircle2, X, Crop, Loader2 } from 'lucide-react';
-import { getDashboardStats } from '../data/studyData';
+import { getDashboardStats } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';

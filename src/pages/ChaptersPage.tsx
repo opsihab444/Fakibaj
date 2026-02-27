@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getSubjectById, getChaptersBySubject } from '../data/studyData';
+import { getSubjectById, getChaptersBySubject } from '../data/mockData';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { ArrowLeft, Layers, ArrowRight, BookOpen } from 'lucide-react';

@@ -1,12 +1,4 @@
-/**
- * ফাঁকিবাজ — স্টাডি ট্র্যাকার
- * ──────────────────────────────────────────────
- * Central data store for syllabus, progress, activity & streaks.
- * All user data is synced with Supabase (no localStorage).
- */
-
 import syllabusRaw from '../../database/data.json' with { type: 'json' };
-import { supabase } from '../lib/supabase';
 
 // ============================================
 // Types
@@ -44,11 +36,6 @@ export interface Subject {
     color: string;
 }
 
-interface DailyActivity {
-    date: string;      // YYYY-MM-DD
-    completed: number; // topics completed that day
-}
-
 // ============================================
 // Icon & Color mapping by subject code
 // ============================================
@@ -68,32 +55,53 @@ const subjectMeta: Record<string, { icon: string; color: string }> = {
 };
 
 // ============================================
-// In-Memory State (Synced with Supabase)
+// Per-user localStorage helpers
 // ============================================
 let currentUserId: string | null = null;
-let topicStatuses: Record<string, Status> = {};
-let activityLog: DailyActivity[] = [];
 
 export function setCurrentUserId(uid: string | null) {
     currentUserId = uid;
-    if (!uid) {
-        topicStatuses = {};
-        activityLog = [];
-    }
 }
 
 export function getCurrentUserId(): string | null {
     return currentUserId;
 }
 
+function getUserKey(base: string): string {
+    return currentUserId ? `${base}_${currentUserId}` : base;
+}
+
+function loadSavedStatuses(): Record<string, Status> {
+    try {
+        const raw = localStorage.getItem(getUserKey('ssc2026_topic_status'));
+        if (raw) return JSON.parse(raw) as Record<string, Status>;
+    } catch { /* ignore */ }
+    return {};
+}
+
+function saveStatuses(statuses: Record<string, Status>) {
+    localStorage.setItem(getUserKey('ssc2026_topic_status'), JSON.stringify(statuses));
+}
+
 // ============================================
-// Build syllabus structure from JSON
+// Build data dynamically from JSON
 // ============================================
-interface JsonTopic { chapter_name: string; topics: string[]; }
-interface JsonSubject { subject_name: string; subject_code: string; chapters: JsonTopic[]; }
+
+interface JsonTopic {
+    chapter_name: string;
+    topics: string[];
+}
+
+interface JsonSubject {
+    subject_name: string;
+    subject_code: string;
+    chapters: JsonTopic[];
+}
 
 const jsonData = syllabusRaw as { syllabus: JsonSubject[] };
 
+// --- Generate all topics ---
+const savedStatuses = loadSavedStatuses();
 const allTopics: Topic[] = [];
 const allChapters: Chapter[] = [];
 const allSubjects: Subject[] = [];
@@ -109,7 +117,7 @@ jsonData.syllabus.forEach((subj, si) => {
 
         ch.topics.forEach((topicTitle, ti) => {
             const topicId = `${chapterId}_t${ti + 1}`;
-            const status: Status = topicStatuses[topicId] || 'not_started';
+            const status: Status = savedStatuses[topicId] || 'not_started';
 
             allTopics.push({
                 id: topicId,
@@ -149,6 +157,10 @@ jsonData.syllabus.forEach((subj, si) => {
     const completedChapters = allChapters.filter(
         (c) => c.subjectId === subjectId && c.status === 'finished'
     ).length;
+    const totalChapters = subj.chapters.length;
+    const progress = totalSubjectTopics > 0
+        ? Math.round((completedSubjectTopics / totalSubjectTopics) * 100)
+        : 0;
 
     allSubjects.push({
         id: subjectId,
@@ -156,63 +168,33 @@ jsonData.syllabus.forEach((subj, si) => {
         code: subj.subject_code,
         description: `এসএসসি ২০২৬ শর্ট সিলেবাস অনুযায়ী ${subj.subject_name} এর সকল অধ্যায় ও টপিক।`,
         icon: meta.icon,
-        totalChapters: subj.chapters.length,
+        totalChapters,
         completedChapters,
-        progress: totalSubjectTopics > 0
-            ? Math.round((completedSubjectTopics / totalSubjectTopics) * 100)
-            : 0,
+        progress,
         color: meta.color,
     });
 });
 
 // ============================================
-// Supabase Sync
+// Public Exports (same API as before)
 // ============================================
+export const mockSubjects = allSubjects;
+export const mockChapters = allChapters;
+export const mockTopics = allTopics;
 
-/** Load user progress from Supabase into memory */
-async function loadFromSupabase() {
-    if (!currentUserId) return;
-    try {
-        const { data } = await supabase
-            .from('user_progress')
-            .select('*')
-            .eq('user_id', currentUserId)
-            .single();
+/**
+ * Reload all topic statuses from localStorage for the current user.
+ * Call this whenever the user changes (login/logout).
+ */
+export function reinitializeData() {
+    const saved = loadSavedStatuses();
 
-        if (data) {
-            if (data.topic_statuses) topicStatuses = data.topic_statuses;
-            if (data.activity_log) activityLog = data.activity_log;
-        }
-    } catch (err) {
-        console.error('Supabase load error:', err);
-    }
-}
-
-/** Push current in-memory state to Supabase */
-async function saveToSupabase() {
-    if (!currentUserId) return;
-    try {
-        await supabase.from('user_progress').upsert({
-            user_id: currentUserId,
-            topic_statuses: topicStatuses,
-            activity_log: activityLog,
-            updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' });
-    } catch (err) {
-        console.error('Supabase save error:', err);
-    }
-}
-
-// ============================================
-// Recalculation Helpers
-// ============================================
-function recalculateAll() {
-    const saved = topicStatuses;
-
+    // Reset all topics
     allTopics.forEach((t) => {
         t.status = saved[t.id] || 'not_started';
     });
 
+    // Recalculate chapters
     allChapters.forEach((ch) => {
         const chapTopics = allTopics.filter((t) => t.chapterId === ch.id);
         ch.completedTopics = chapTopics.filter((t) => t.status === 'finished').length;
@@ -224,6 +206,7 @@ function recalculateAll() {
                     : 'not_started';
     });
 
+    // Recalculate subjects
     allSubjects.forEach((subj) => {
         const subjChapters = allChapters.filter((c) => c.subjectId === subj.id);
         subj.completedChapters = subjChapters.filter((c) => c.status === 'finished').length;
@@ -231,21 +214,6 @@ function recalculateAll() {
         const completed = subjTopics.filter((t) => t.status === 'finished').length;
         subj.progress = subjTopics.length > 0 ? Math.round((completed / subjTopics.length) * 100) : 0;
     });
-}
-
-// ============================================
-// Public API
-// ============================================
-
-/**
- * Fetch user data from Supabase and recalculate everything.
- * Call on login / auth state change.
- */
-export async function reinitializeData() {
-    if (currentUserId) {
-        await loadFromSupabase();
-    }
-    recalculateAll();
 }
 
 export const getSubjects = () => allSubjects;
@@ -256,57 +224,55 @@ export const getChapterById = (id: string) => allChapters.find((c) => c.id === i
 export const getTopicsByChapter = (chapterId: string) =>
     allTopics.filter((t) => t.chapterId === chapterId);
 
-/** Update a topic status & sync to Supabase */
+// Update a topic status & persist to localStorage
 export const updateTopicStatus = (topicId: string, newStatus: Status) => {
     const topic = allTopics.find((t) => t.id === topicId);
-    if (!topic) return;
+    if (topic) {
+        const wasFinished = topic.status === 'finished';
+        topic.status = newStatus;
+        // Save to localStorage
+        const current = loadSavedStatuses();
+        if (newStatus === 'not_started') {
+            delete current[topicId];
+        } else {
+            current[topicId] = newStatus;
+        }
+        saveStatuses(current);
 
-    const wasFinished = topic.status === 'finished';
-    topic.status = newStatus;
+        // Track activity: record a completion event
+        if (newStatus === 'finished' && !wasFinished) {
+            recordActivity(1);
+        } else if (newStatus !== 'finished' && wasFinished) {
+            recordActivity(-1);
+        }
 
-    // Update in-memory statuses
-    if (newStatus === 'not_started') {
-        delete topicStatuses[topicId];
-    } else {
-        topicStatuses[topicId] = newStatus;
-    }
+        // Recalculate chapter stats
+        const chapter = allChapters.find((c) => c.id === topic.chapterId);
+        if (chapter) {
+            const chapterTopics = allTopics.filter((t) => t.chapterId === chapter.id);
+            chapter.completedTopics = chapterTopics.filter((t) => t.status === 'finished').length;
+            chapter.status =
+                chapter.completedTopics === chapter.totalTopics && chapter.totalTopics > 0
+                    ? 'finished'
+                    : chapter.completedTopics > 0
+                        ? 'ongoing'
+                        : 'not_started';
 
-    // Track activity
-    if (newStatus === 'finished' && !wasFinished) {
-        recordActivity(1);
-    } else if (newStatus !== 'finished' && wasFinished) {
-        recordActivity(-1);
-    }
-
-    // Recalculate chapter
-    const chapter = allChapters.find((c) => c.id === topic.chapterId);
-    if (chapter) {
-        const chapterTopics = allTopics.filter((t) => t.chapterId === chapter.id);
-        chapter.completedTopics = chapterTopics.filter((t) => t.status === 'finished').length;
-        chapter.status =
-            chapter.completedTopics === chapter.totalTopics && chapter.totalTopics > 0
-                ? 'finished'
-                : chapter.completedTopics > 0
-                    ? 'ongoing'
-                    : 'not_started';
-
-        // Recalculate subject
-        const subject = allSubjects.find((s) => s.id === chapter.subjectId);
-        if (subject) {
-            const subjectChapters = allChapters.filter((c) => c.subjectId === subject.id);
-            subject.completedChapters = subjectChapters.filter((c) => c.status === 'finished').length;
-            const subjectTopics = allTopics.filter((t) =>
-                subjectChapters.some((c) => c.id === t.chapterId)
-            );
-            const completedCount = subjectTopics.filter((t) => t.status === 'finished').length;
-            subject.progress = subjectTopics.length > 0
-                ? Math.round((completedCount / subjectTopics.length) * 100)
-                : 0;
+            // Recalculate subject stats
+            const subject = allSubjects.find((s) => s.id === chapter.subjectId);
+            if (subject) {
+                const subjectChapters = allChapters.filter((c) => c.subjectId === subject.id);
+                subject.completedChapters = subjectChapters.filter((c) => c.status === 'finished').length;
+                const subjectTopics = allTopics.filter((t) =>
+                    subjectChapters.some((c) => c.id === t.chapterId)
+                );
+                const completedCount = subjectTopics.filter((t) => t.status === 'finished').length;
+                subject.progress = subjectTopics.length > 0
+                    ? Math.round((completedCount / subjectTopics.length) * 100)
+                    : 0;
+            }
         }
     }
-
-    // Sync to Supabase in background
-    saveToSupabase();
 };
 
 export const getDashboardStats = () => {
@@ -337,27 +303,49 @@ export const getDashboardStats = () => {
 // Activity Tracking & Streak System
 // ============================================
 
+interface DailyActivity {
+    date: string;      // YYYY-MM-DD
+    completed: number; // topics completed that day
+}
+
 function getDateStr(d: Date = new Date()): string {
     return d.toISOString().split('T')[0];
 }
 
+function loadActivityLog(): DailyActivity[] {
+    try {
+        const raw = localStorage.getItem(getUserKey('ssc2026_activity_log'));
+        if (raw) return JSON.parse(raw) as DailyActivity[];
+    } catch { /* ignore */ }
+    return [];
+}
+
+function saveActivityLog(log: DailyActivity[]) {
+    localStorage.setItem(getUserKey('ssc2026_activity_log'), JSON.stringify(log));
+}
+
 function recordActivity(delta: number) {
+    const log = loadActivityLog();
     const today = getDateStr();
-    const existing = activityLog.find((e) => e.date === today);
+    const existing = log.find((e) => e.date === today);
     if (existing) {
         existing.completed = Math.max(0, existing.completed + delta);
     } else if (delta > 0) {
-        activityLog.push({ date: today, completed: delta });
+        log.push({ date: today, completed: delta });
     }
     // Keep only last 30 days
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
     const cutoffStr = getDateStr(cutoff);
-    activityLog = activityLog.filter((e) => e.date >= cutoffStr);
+    const filtered = log.filter((e) => e.date >= cutoffStr);
+    saveActivityLog(filtered);
 }
 
-/** Returns last N days activity for chart display */
+/**
+ * Returns last N days activity for chart display
+ */
 export function getActivityChartData(days: number = 7): { name: string; completed: number }[] {
+    const log = loadActivityLog();
     const result: { name: string; completed: number }[] = [];
     const dayNames = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহ', 'শুক্র', 'শনি'];
 
@@ -365,7 +353,7 @@ export function getActivityChartData(days: number = 7): { name: string; complete
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = getDateStr(d);
-        const entry = activityLog.find((e) => e.date === dateStr);
+        const entry = log.find((e) => e.date === dateStr);
         result.push({
             name: dayNames[d.getDay()],
             completed: entry ? entry.completed : 0,
@@ -374,12 +362,17 @@ export function getActivityChartData(days: number = 7): { name: string; complete
     return result;
 }
 
-/** Returns streak info: current streak count and this week's day activity */
+/**
+ * Returns streak info: current streak count and this week's day activity
+ */
 export function getStreakData(): { streak: number; weekDays: { label: string; active: boolean }[] } {
-    const logDates = new Set(activityLog.filter((e) => e.completed > 0).map((e) => e.date));
+    const log = loadActivityLog();
+    const logDates = new Set(log.filter((e) => e.completed > 0).map((e) => e.date));
 
+    // Calculate consecutive streak ending today or yesterday
     let streak = 0;
     const checkDate = new Date();
+    // If the user hasn't done anything today, start checking from yesterday
     if (!logDates.has(getDateStr(checkDate))) {
         checkDate.setDate(checkDate.getDate() - 1);
     }
@@ -389,9 +382,11 @@ export function getStreakData(): { streak: number; weekDays: { label: string; ac
         checkDate.setDate(checkDate.getDate() - 1);
     }
 
+    // Build this week's activity (Mon–Sun)
     const weekLabels = ['সো', 'ম', 'বু', 'বৃ', 'শু', 'শ', 'র'];
     const today = new Date();
-    const dayOfWeek = today.getDay();
+    const dayOfWeek = today.getDay(); // 0=Sun
+    // Find Monday of this week
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const monday = new Date(today);
     monday.setDate(today.getDate() + mondayOffset);
@@ -399,7 +394,10 @@ export function getStreakData(): { streak: number; weekDays: { label: string; ac
     const weekDays = weekLabels.map((label, i) => {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
-        return { label, active: logDates.has(getDateStr(d)) };
+        return {
+            label,
+            active: logDates.has(getDateStr(d)),
+        };
     });
 
     return { streak, weekDays };

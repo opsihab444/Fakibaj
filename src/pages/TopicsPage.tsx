@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getChapterById, getSubjectById, getTopicsByChapter, updateTopicStatus } from '../data/studyData';
-import type { Topic, Status } from '../data/studyData';
+import { getChapterById, getSubjectById, getTopicsByChapter, updateTopicStatus } from '../data/mockData';
+import type { Topic, Status } from '../data/mockData';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { ArrowLeft, BookOpen, CheckCircle2 } from 'lucide-react';

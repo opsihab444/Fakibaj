@@ -1,4 +1,4 @@
-import type { Status } from '../../data/studyData';
+import type { Status } from '../../data/mockData';
 import { CheckCircle2, Circle, PlayCircle } from 'lucide-react';
 
 interface StatusBadgeProps {
