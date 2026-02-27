@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LibraryBig, Settings, Bell, Search, PanelLeftClose, PanelLeft, LogOut, UserCircle, Target } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, LibraryBig, Settings, Bell, Search, PanelLeftClose, PanelLeft, LogOut, UserCircle, Target, Trophy, Clock } from 'lucide-react';
 import { LogoIcon } from '../ui/LogoIcon';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const WebLayout = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
+    const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
     const location = useLocation();
+    const navigate = useNavigate();
     const { user, signOut } = useAuth();
 
     const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ব্যবহারকারী';
@@ -167,6 +168,32 @@ export const WebLayout = () => {
                         {sidebarOpen && <span style={{ whiteSpace: 'nowrap', fontSize: '1.05rem' }}>বিষয় ও সিলেবাস</span>}
                     </NavLink>
 
+                    <NavLink to="/leaderboard" style={({ isActive }) => ({
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '0.85rem 1rem', borderRadius: '12px',
+                        color: isActive ? '#34d399' : 'var(--text-secondary)',
+                        background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                        textDecoration: 'none', fontWeight: isActive ? 600 : 500,
+                        transition: 'all 0.2s ease',
+                        justifyContent: sidebarOpen ? 'flex-start' : 'center'
+                    })}>
+                        <Trophy size={22} style={{ flexShrink: 0 }} />
+                        {sidebarOpen && <span style={{ whiteSpace: 'nowrap', fontSize: '1.05rem' }}>লিডারবোর্ড</span>}
+                    </NavLink>
+
+                    <NavLink to="/pomodoro" style={({ isActive }) => ({
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '0.85rem 1rem', borderRadius: '12px',
+                        color: isActive ? '#34d399' : 'var(--text-secondary)',
+                        background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                        textDecoration: 'none', fontWeight: isActive ? 600 : 500,
+                        transition: 'all 0.2s ease',
+                        justifyContent: sidebarOpen ? 'flex-start' : 'center'
+                    })}>
+                        <Clock size={22} style={{ flexShrink: 0 }} />
+                        {sidebarOpen && <span style={{ whiteSpace: 'nowrap', fontSize: '1.05rem' }}>পোমোডোরো</span>}
+                    </NavLink>
+
                     <NavLink to="/profile" style={({ isActive }) => ({
                         display: 'flex', alignItems: 'center', gap: '1rem',
                         padding: '0.85rem 1rem', borderRadius: '12px',
@@ -311,17 +338,23 @@ export const WebLayout = () => {
                             whiteSpace: 'nowrap',
                             marginLeft: isMobile ? 0 : '1rem'
                         }}>
-                            <Target size={14} /> এসএসসি ২০২৬: {timeLeft.days} দিন {timeLeft.hours} ঘণ্টা
+                            <Target size={14} /> এসএসসি ২০২৬: {timeLeft.days.toLocaleString('bn-BD')} দিন {timeLeft.hours.toLocaleString('bn-BD')} ঘণ্টা
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                         {isMobile && <Search size={20} color="var(--text-secondary)" />}
-                        <button style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', position: 'relative' }}>
+                        <button
+                            onClick={() => navigate('/notifications')}
+                            style={{ background: 'transparent', border: 'none', color: location.pathname === '/notifications' ? '#34d399' : 'var(--text-secondary)', cursor: 'pointer', position: 'relative' }}
+                        >
                             <Bell size={20} />
                             <span style={{ position: 'absolute', top: -2, right: -2, width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
                         </button>
-                        <button style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        <button
+                            onClick={() => navigate('/settings')}
+                            style={{ background: 'transparent', border: 'none', color: location.pathname === '/settings' ? '#34d399' : 'var(--text-secondary)', cursor: 'pointer' }}
+                        >
                             <Settings size={20} />
                         </button>
                     </div>

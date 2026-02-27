@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, CheckCircle, Target } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, Target, CheckCircle } from 'lucide-react';
 import { LogoIcon } from '../components/ui/LogoIcon';
 
 export const AuthPage = () => {
     const { signIn, signUp } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+
+    const [regName, setRegName] = useState('');
+    const [regEmail, setRegEmail] = useState('');
+    const [regPassword, setRegPassword] = useState('');
+
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -22,26 +26,33 @@ export const AuthPage = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
+        const result = await signIn(loginEmail, loginPassword);
+        handleResult(result);
+    };
 
-        if (!isLogin && name.trim().length < 2) {
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        if (regName.trim().length < 2) {
             setError('নাম কমপক্ষে ২ অক্ষর হতে হবে');
             setLoading(false);
             return;
         }
-        if (password.length < 6) {
+        if (regPassword.length < 6) {
             setError('পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে');
             setLoading(false);
             return;
         }
+        const result = await signUp(regEmail, regPassword, regName);
+        handleResult(result);
+    };
 
-        const result = isLogin
-            ? await signIn(email, password)
-            : await signUp(email, password, name);
-
+    const handleResult = (result: any) => {
         if (result.error) {
             const msg = result.error;
             if (msg.includes('Invalid login')) setError('ইমেইল বা পাসওয়ার্ড ভুল হয়েছে');
@@ -53,258 +64,285 @@ export const AuthPage = () => {
         setLoading(false);
     };
 
+    // Animation Variants
+    const formVariants = {
+        hidden: (isLoginFlow: boolean) => ({
+            opacity: 0,
+            x: isLoginFlow ? -40 : 40,
+            scale: 0.95,
+            filter: 'blur(4px)'
+        }),
+        visible: {
+            opacity: 1,
+            x: 0,
+            scale: 1,
+            filter: 'blur(0px)',
+            transition: {
+                type: 'spring', stiffness: 300, damping: 25, mass: 0.8, staggerChildren: 0.05
+            }
+        },
+        exit: (isLoginFlow: boolean) => ({
+            opacity: 0,
+            x: isLoginFlow ? 40 : -40,
+            scale: 0.95,
+            filter: 'blur(4px)',
+            transition: { duration: 0.2, ease: 'easeIn' }
+        })
+    } as any;
+
+    const InputField = ({ icon: Icon, type, placeholder, value, onChange, label, extra, actionIcon: ActionIcon, onAction }: any) => (
+        <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{label}</label>
+                {extra && extra}
+            </div>
+            <div style={{ position: 'relative' }}>
+                <Icon size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', zIndex: 2 }} />
+                <input
+                    type={type} placeholder={placeholder} value={value} onChange={onChange} required
+                    style={{
+                        width: '100%', padding: isMobile ? '0.9rem 2.8rem 0.9rem 3rem' : '1.1rem 3rem 1.1rem 3rem',
+                        background: 'rgba(20, 20, 28, 0.6)', border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '16px', color: 'white', fontSize: isMobile ? '0.9rem' : '1rem',
+                        outline: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
+                        letterSpacing: type === 'password' ? '2px' : 'normal'
+                    }}
+                    onFocus={(e) => {
+                        e.target.style.background = 'rgba(255,255,255,0.05)';
+                        e.target.style.borderColor = 'rgba(16,185,129,0.5)';
+                        e.target.style.boxShadow = '0 0 0 4px rgba(16,185,129,0.1), inset 0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                    onBlur={(e) => {
+                        e.target.style.background = 'rgba(20, 20, 28, 0.6)';
+                        e.target.style.borderColor = 'rgba(255,255,255,0.08)';
+                        e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                />
+                {ActionIcon && (
+                    <button type="button" onClick={onAction} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 0, display: 'flex' }}>
+                        <ActionIcon size={18} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#040406',
-            padding: isMobile ? '0.5rem' : '2rem',
-            position: 'relative',
-            overflow: 'hidden',
+            minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#040406', padding: isMobile ? '0.5rem' : '2rem', position: 'relative', overflow: 'hidden',
             fontFamily: "'Hind Siliguri', 'Outfit', sans-serif"
         }}>
             {/* Ambient Background Glows */}
             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-                <motion.div animate={{ x: [0, 100, 0], y: [0, -100, 0], scale: [1, 1.2, 1] }} transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50vw', height: '50vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 60%)', filter: 'blur(60px)' }} />
-                <motion.div animate={{ x: [0, -120, 0], y: [0, 80, 0], scale: [1, 1.4, 1] }} transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'absolute', bottom: '-20%', right: '-10%', width: '60vw', height: '60vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.04) 0%, transparent 60%)', filter: 'blur(80px)' }} />
+                <motion.div animate={{ x: [0, 50, 0], y: [0, -50, 0] }} transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'absolute', top: '10%', left: '10%', width: '40vw', height: '40vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 60%)', filter: 'blur(80px)' }} />
+                <motion.div animate={{ x: [0, -60, 0], y: [0, 60, 0] }} transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'absolute', bottom: '10%', right: '10%', width: '50vw', height: '50vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.05) 0%, transparent 60%)', filter: 'blur(100px)' }} />
             </div>
 
-            {/* Grid Pattern */}
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px)', backgroundSize: '40px 40px', maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px)', backgroundSize: '40px 40px', maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 100%)', zIndex: 0 }} />
 
-            {/* Main Container Split Layout */}
+            {/* Main Container */}
             <motion.div
-                initial={{ opacity: 0, y: 40, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.8, type: 'spring', stiffness: 100, damping: 20 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, type: 'spring', bounce: 0.4 }}
                 style={{
-                    width: '100%',
-                    maxWidth: '1200px',
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: isMobile ? '0' : '1rem',
-                    background: 'rgba(12, 12, 16, 0.4)',
-                    backdropFilter: 'blur(30px)',
-                    WebkitBackdropFilter: 'blur(30px)',
-                    borderRadius: '32px',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
-                    overflow: 'hidden',
-                    position: 'relative',
-                    zIndex: 1
+                    width: '100%', maxWidth: '1000px',
+                    display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+                    background: 'rgba(15, 15, 20, 0.4)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
+                    borderRadius: '32px', border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 40px 100px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.1)',
+                    overflow: 'hidden', position: 'relative', zIndex: 1
                 }}
             >
-                {/* ---------- LEFT COL: Branding & Hero ---------- */}
+                {/* LEFT COL: Branding & Visuals */}
                 <div style={{
-                    position: 'relative',
-                    padding: isMobile ? '2.5rem 1rem 1.5rem 1rem' : '4rem 3rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: isMobile ? 'center' : 'center',
-                    alignItems: isMobile ? 'center' : 'flex-start',
-                    textAlign: isMobile ? 'center' : 'left',
-                    minHeight: isMobile ? 'auto' : '100%',
-                    background: 'linear-gradient(135deg, rgba(16,185,129,0.03) 0%, rgba(0,0,0,0) 100%)',
-                    borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.03)',
-                    borderBottom: isMobile ? '1px solid rgba(255,255,255,0.05)' : 'none'
+                    order: isMobile ? 2 : 1,
+                    width: isMobile ? '100%' : '55%',
+                    padding: isMobile ? '1.5rem' : '4rem',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                    background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, transparent 100%)',
+                    borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                    borderTop: isMobile ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                    position: 'relative'
                 }}>
-                    <div style={{ zIndex: 1, position: 'relative' }}>
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: '0.8rem', marginBottom: isMobile ? '1.2rem' : '2rem' }}>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                filter: 'drop-shadow(0 8px 15px rgba(16, 185, 129, 0.3))'
-                            }}>
-                                <LogoIcon size={isMobile ? 48 : 56} />
+                    {!isMobile && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', justifyContent: 'flex-start' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 0 20px rgba(16,185,129,0.4))' }}>
+                                <LogoIcon size={60} />
                             </div>
-                            <h1 style={{ fontSize: isMobile ? '1.5rem' : '1.8rem', fontWeight: 800, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
+                            <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.03em' }}>
                                 ফাঁকি<span style={{ color: '#10b981' }}>বাজ</span>
                             </h1>
                         </motion.div>
+                    )}
 
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                            <h2 style={{ fontSize: isMobile ? '1.4rem' : '2.8rem', fontWeight: 800, color: 'white', lineHeight: 1.3, marginBottom: isMobile ? '0.6rem' : '1.2rem', letterSpacing: '-0.02em' }}>
-                                এসএসসি ২০২৬<br />
-                                <span style={{ background: 'linear-gradient(135deg, #fce7f3 0%, #34d399 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                    সময় মাত্র ২ মাসেরও কম!
-                                </span>
-                            </h2>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.85rem' : '1.05rem', lineHeight: 1.5, maxWidth: isMobile ? '100%' : '85%', fontWeight: 400, margin: isMobile ? '0 auto' : '0' }}>
-                                আর দেরি নয়। এখনই শুরু করুন আপনার সম্পূর্ণ সিলেবাস ট্র্যাকিং আর ফাটাফাটি প্রস্তুতি!
-                            </p>
-                        </motion.div>
-                    </div>
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={{ textAlign: isMobile ? 'center' : 'left' }}>
+                        {isMobile ? (
+                            <>
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'white', lineHeight: 1.3, marginBottom: '0.4rem', letterSpacing: '-0.01em' }}>
+                                    এসএসসি ২০২৬: <span style={{ color: '#ef4444' }}>মাত্র ২ মাসেরও কম!</span>
+                                </h2>
+                                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: 0 }}>প্রস্তুতি হোক আরও স্মার্ট, আরও দ্রুত!</p>
+                            </>
+                        ) : (
+                            <>
+                                <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', lineHeight: 1.2, marginBottom: '1rem', letterSpacing: '-0.02em' }}>
+                                    প্রস্তুতি হোক <br />
+                                    <span style={{ background: 'linear-gradient(135deg, #a7f3d0 0%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                        আরও স্মার্ট, আরও দ্রুত!
+                                    </span>
+                                </h2>
+                                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem', lineHeight: 1.6, maxWidth: '400px', margin: 0 }}>
+                                    এসএসসি ২০২৬ এর সম্পূর্ণ সিলেবাস ট্র্যাক করুন, লিডারবোর্ডে টপে থাকুন আর ফাটিয়ে রেজাল্ট করুন।
+                                </p>
+                            </>
+                        )}
+                    </motion.div>
 
-                    {/* Floating Hero UI Elements (Hidden on mobile) */}
                     {!isMobile && (
-                        <div style={{ position: 'relative', flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '3rem' }}>
-                            <motion.div
-                                animate={{ y: [0, -15, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                                style={{
-                                    position: 'absolute', right: '5%', top: '20%',
-                                    background: 'rgba(15,15,20,0.8)', padding: '1rem 1.5rem', borderRadius: '16px',
-                                    border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-                                    display: 'flex', alignItems: 'center', gap: '1rem', zIndex: 3, backdropFilter: 'blur(10px)'
-                                }}
-                            >
-                                <div style={{ padding: '0.6rem', background: 'rgba(16,185,129,0.1)', borderRadius: '10px', color: '#34d399' }}><Target size={20} /></div>
-                                <div>
-                                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>লক্ষ্য পূরণ</div>
-                                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'white' }}>৮৫% সম্পন্ন</div>
-                                </div>
-                            </motion.div>
-
-                            <motion.div
-                                animate={{ y: [0, 15, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                                style={{
-                                    position: 'absolute', left: '10%', bottom: '10%',
-                                    background: 'linear-gradient(135deg, rgba(20,20,30,0.9) 0%, rgba(10,10,15,0.9) 100%)', padding: '1.25rem', borderRadius: '20px',
-                                    border: '1px solid rgba(16,185,129,0.2)', boxShadow: '0 20px 50px rgba(16,185,129,0.1)',
-                                    display: 'flex', alignItems: 'center', gap: '1rem', zIndex: 2, backdropFilter: 'blur(10px)'
-                                }}
-                            >
-                                <div style={{ position: 'relative' }}>
-                                    <svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" /><circle cx="24" cy="24" r="20" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="125" strokeDashoffset="30" strokeLinecap="round" /></svg>
-                                    <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>৭৬%</span>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white', marginBottom: '0.2rem' }}>পদার্থবিজ্ঞান</div>
-                                    <div style={{ display: 'flex', gap: '0.3rem' }}><CheckCircle size={12} color="#10b981" /><span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>অধ্যায় ৪ সম্পন্ন</span></div>
-                                </div>
-                            </motion.div>
-                        </div>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ marginTop: 'auto', display: 'flex', gap: '1rem', paddingTop: '3rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 1rem', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Target size={16} color="#34d399" /> <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>স্মার্ট ট্র্যাকিং</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 1rem', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <CheckCircle size={16} color="#34d399" /> <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>১০০% কভার</span>
+                            </div>
+                        </motion.div>
                     )}
                 </div>
 
-                {/* ---------- RIGHT COL: Auth Form ---------- */}
-                <div style={{ padding: isMobile ? '1.5rem 1rem 2.5rem 1rem' : '4rem 3rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+                {/* RIGHT COL: Dynamic Auth Forms */}
+                <div style={{
+                    order: isMobile ? 1 : 2,
+                    width: isMobile ? '100%' : '45%',
+                    padding: isMobile ? '2.5rem 1.5rem 1rem' : '4rem 3rem',
+                    display: 'flex', flexDirection: 'column', position: 'relative'
+                }}>
+                    {isMobile && (
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                            <div style={{ filter: 'drop-shadow(0 0 15px rgba(16,185,129,0.3))' }}>
+                                <LogoIcon size={42} />
+                            </div>
+                            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
+                                ফাঁকি<span style={{ color: '#10b981' }}>বাজ</span>
+                            </h1>
+                        </motion.div>
+                    )}
 
-                        <div style={{ marginBottom: isMobile ? '1.2rem' : '2.5rem', textAlign: isMobile ? 'center' : 'left' }}>
-                            <h3 style={{ fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: 800, color: 'white', marginBottom: '0.3rem', letterSpacing: '-0.02em' }}>
-                                স্বাগতম! 🤪
-                            </h3>
-                            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
-                                আপনার অ্যাকাউন্টে {isLogin ? 'লগইন' : 'সাইন আপ'} করে শুরু করুন।
-                            </p>
-                        </div>
-
-                        {/* Tab Toggle */}
-                        <div style={{
-                            display: 'flex', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '5px', marginBottom: isMobile ? '1.5rem' : '2.5rem', border: '1px solid rgba(255,255,255,0.06)'
-                        }}>
-                            {['লগইন', 'সাইন আপ'].map((tab, i) => {
-                                const active = (i === 0 && isLogin) || (i === 1 && !isLogin);
-                                return (
-                                    <button
-                                        key={tab}
-                                        onClick={() => { setIsLogin(i === 0); setError(''); }}
-                                        style={{
-                                            flex: 1, padding: isMobile ? '0.65rem' : '0.85rem', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                                            fontSize: isMobile ? '0.85rem' : '0.95rem', fontWeight: 700, transition: 'all 0.3s ease', position: 'relative',
-                                            background: 'transparent', color: active ? 'white' : 'rgba(255,255,255,0.4)',
-                                            zIndex: 1
-                                        }}
-                                    >
-                                        {active && (
-                                            <motion.div
-                                                layoutId="activeTab"
-                                                style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.05)', borderRadius: '12px', zIndex: -1, border: '1px solid rgba(255,255,255,0.1)' }}
-                                            />
-                                        )}
-                                        {tab}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Error Alert */}
-                        <AnimatePresence>
-                            {error && (
-                                <motion.div initial={{ opacity: 0, scale: 0.95, height: 0 }} animate={{ opacity: 1, scale: 1, height: 'auto' }} exit={{ opacity: 0, scale: 0.95, height: 0 }}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: isMobile ? '0.8rem' : '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '14px', marginBottom: isMobile ? '1rem' : '1.5rem', color: '#fca5a5', fontSize: '0.85rem', fontWeight: 500 }}
+                    {/* Advanced Toggle Switch */}
+                    <div style={{
+                        display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '20px', padding: '6px',
+                        marginBottom: '2.5rem', border: '1px solid rgba(255,255,255,0.05)', position: 'relative',
+                        maxWidth: '400px', margin: '0 auto 2.5rem auto', width: '100%'
+                    }}>
+                        <motion.div
+                            animate={{ x: isLogin ? 0 : '100%' }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                            style={{
+                                position: 'absolute', top: 6, bottom: 6, left: 6, width: 'calc(50% - 6px)',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))',
+                                borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.3)', zIndex: 0
+                            }}
+                        />
+                        {['লগইন', 'সাইন আপ'].map((tab, i) => {
+                            const active = (i === 0 && isLogin) || (i === 1 && !isLogin);
+                            return (
+                                <button
+                                    key={tab} onClick={() => { setIsLogin(i === 0); setError(''); }}
+                                    style={{
+                                        flex: 1, padding: '0.85rem', borderRadius: '14px', border: 'none', cursor: 'pointer',
+                                        fontSize: '0.95rem', fontWeight: 800, transition: 'all 0.3s ease',
+                                        background: 'transparent', color: active ? 'white' : 'rgba(255,255,255,0.4)',
+                                        zIndex: 1, textShadow: active ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
+                                    }}
                                 >
-                                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                                    {error}
-                                </motion.div>
+                                    {tab}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Smooth Error Alert */}
+                    <AnimatePresence mode="wait">
+                        {error && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', marginBottom: '1.5rem', color: '#fca5a5', fontSize: '0.9rem', fontWeight: 600, maxWidth: '400px', width: '100%', margin: '0 auto 1.5rem auto' }}
+                            >
+                                <AlertCircle size={18} style={{ flexShrink: 0 }} /> {error}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Form Container with AnimatePresence for Complete Swapping */}
+                    <div style={{ position: 'relative', width: '100%', maxWidth: '400px', margin: '0 auto', flex: 1, minHeight: isMobile ? '380px' : '440px' }}>
+                        <AnimatePresence mode="wait" custom={isLogin}>
+                            {isLogin ? (
+                                /* LOGIN FORM */
+                                <motion.form
+                                    key="login-form"
+                                    custom={true} variants={formVariants} initial="hidden" animate="visible" exit="exit"
+                                    onSubmit={handleLogin}
+                                    style={{ width: '100%', position: 'absolute', top: 0, left: 0 }}
+                                >
+                                    <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>ফিরে আসার জন্য ধন্যবাদ! 👋</h3>
+                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>আপনার পড়াশোনার গিয়ার আপ করুন।</p>
+                                    </div>
+
+                                    <InputField icon={Mail} type="email" placeholder="example@email.com" label="ইমেইল অ্যাড্রেস" value={loginEmail} onChange={(e: any) => setLoginEmail(e.target.value)} />
+
+                                    <InputField
+                                        icon={Lock} type={showPass ? 'text' : 'password'} placeholder="••••••••" label="পাসওয়ার্ড" value={loginPassword} onChange={(e: any) => setLoginPassword(e.target.value)}
+                                        extra={<span style={{ fontSize: '0.8rem', color: '#10b981', cursor: 'pointer', fontWeight: 600 }}>ভুলে গেছেন?</span>}
+                                        actionIcon={showPass ? EyeOff : Eye} onAction={() => setShowPass(!showPass)}
+                                    />
+
+                                    <motion.button
+                                        type="submit" disabled={loading}
+                                        whileHover={{ scale: loading ? 1 : 1.02, boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)' }}
+                                        whileTap={{ scale: loading ? 1 : 0.98 }}
+                                        style={{ width: '100%', padding: '1.1rem', borderRadius: '16px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '1.05rem', fontWeight: 800, background: loading ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginTop: '2rem', transition: 'box-shadow 0.3s ease' }}
+                                    >
+                                        {loading ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ width: 22, height: 22, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} /> : <><ArrowRight size={20} /> লগইন করুন</>}
+                                    </motion.button>
+                                </motion.form>
+                            ) : (
+                                /* SIGNUP FORM */
+                                <motion.form
+                                    key="signup-form"
+                                    custom={false} variants={formVariants} initial="hidden" animate="visible" exit="exit"
+                                    onSubmit={handleRegister}
+                                    style={{ width: '100%', position: 'absolute', top: 0, left: 0 }}
+                                >
+                                    <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>যোগ দিন এখনই! 🚀</h3>
+                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>নতুন অ্যাকাউন্ট তৈরি করে যাত্রা শুরু করুন।</p>
+                                    </div>
+
+                                    <InputField icon={User} type="text" placeholder="আপনার নাম" label="সম্পূর্ণ নাম" value={regName} onChange={(e: any) => setRegName(e.target.value)} />
+
+                                    <InputField icon={Mail} type="email" placeholder="example@email.com" label="ইমেইল অ্যাড্রেস" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} />
+
+                                    <InputField
+                                        icon={Lock} type={showPass ? 'text' : 'password'} placeholder="••••••••" label="নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)" value={regPassword} onChange={(e: any) => setRegPassword(e.target.value)}
+                                        actionIcon={showPass ? EyeOff : Eye} onAction={() => setShowPass(!showPass)}
+                                    />
+
+                                    <motion.button
+                                        type="submit" disabled={loading}
+                                        whileHover={{ scale: loading ? 1 : 1.02, boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)' }}
+                                        whileTap={{ scale: loading ? 1 : 0.98 }}
+                                        style={{ width: '100%', padding: '1.1rem', borderRadius: '16px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '1.05rem', fontWeight: 800, background: loading ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginTop: '2rem', transition: 'box-shadow 0.3s ease' }}
+                                    >
+                                        {loading ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ width: 22, height: 22, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} /> : <><ArrowRight size={20} /> অ্যাকাউন্ট তৈরি করুন</>}
+                                    </motion.button>
+                                </motion.form>
                             )}
                         </AnimatePresence>
-
-                        {/* Form */}
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1rem' : '1.25rem' }}>
-                            <AnimatePresence>
-                                {!isLogin && (
-                                    <motion.div initial={{ opacity: 0, height: 0, y: -10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: -10 }} style={{ overflow: 'hidden' }}>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: '0.4rem' }}>আপনার নাম</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <User size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                                            <input
-                                                type="text" placeholder="যেমন: শিহাব" value={name} onChange={(e) => setName(e.target.value)}
-                                                style={{ width: '100%', padding: isMobile ? '0.8rem 1rem 0.8rem 2.8rem' : '1rem 1rem 1rem 3rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', color: 'white', fontSize: isMobile ? '0.9rem' : '1rem', outline: 'none', transition: 'all 0.3s' }}
-                                                onFocus={(e) => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.borderColor = 'rgba(16,185,129,0.5)'; }}
-                                                onBlur={(e) => { e.target.style.background = 'rgba(255,255,255,0.02)'; e.target.style.borderColor = 'rgba(255,255,255,0.06)'; }}
-                                            />
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: '0.4rem' }}>ইমেইল অ্যাড্রেস</label>
-                                <div style={{ position: 'relative' }}>
-                                    <Mail size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                                    <input
-                                        type="email" placeholder="example@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required
-                                        style={{ width: '100%', padding: isMobile ? '0.8rem 1rem 0.8rem 2.8rem' : '1rem 1rem 1rem 3rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', color: 'white', fontSize: isMobile ? '0.9rem' : '1rem', outline: 'none', transition: 'all 0.3s' }}
-                                        onFocus={(e) => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.borderColor = 'rgba(16,185,129,0.5)'; }}
-                                        onBlur={(e) => { e.target.style.background = 'rgba(255,255,255,0.02)'; e.target.style.borderColor = 'rgba(255,255,255,0.06)'; }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                                    <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>পাসওয়ার্ড</label>
-                                    {isLogin && <span style={{ fontSize: '0.75rem', color: '#10b981', cursor: 'pointer', fontWeight: 600 }}>পাসওয়ার্ড ভুলে গেছেন?</span>}
-                                </div>
-                                <div style={{ position: 'relative' }}>
-                                    <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
-                                    <input
-                                        type={showPass ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required
-                                        style={{ width: '100%', padding: isMobile ? '0.8rem 3rem 0.8rem 2.8rem' : '1rem 3rem 1rem 3rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', color: 'white', fontSize: isMobile ? '0.9rem' : '1rem', outline: 'none', transition: 'all 0.3s', letterSpacing: showPass ? 'normal' : '2px' }}
-                                        onFocus={(e) => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.borderColor = 'rgba(16,185,129,0.5)'; }}
-                                        onBlur={(e) => { e.target.style.background = 'rgba(255,255,255,0.02)'; e.target.style.borderColor = 'rgba(255,255,255,0.06)'; }}
-                                    />
-                                    <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 0, display: 'flex' }}>
-                                        {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <motion.button
-                                type="submit" disabled={loading}
-                                whileHover={{ scale: loading ? 1 : 1.01, boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)' }}
-                                whileTap={{ scale: loading ? 1 : 0.98 }}
-                                style={{
-                                    width: '100%', padding: isMobile ? '0.9rem' : '1.1rem', borderRadius: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 700,
-                                    background: loading ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                    color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
-                                    marginTop: isMobile ? '0.2rem' : '0.5rem', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden'
-                                }}
-                            >
-                                {loading ? (
-                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ width: 22, height: 22, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} />
-                                ) : (
-                                    <>
-                                        {isLogin ? 'লগইন করুন' : 'অ্যাকাউন্ট তৈরি করুন'}
-                                        <ArrowRight size={18} />
-                                    </>
-                                )}
-                            </motion.button>
-                        </form>
-                    </motion.div>
+                    </div>
                 </div>
             </motion.div>
         </div>

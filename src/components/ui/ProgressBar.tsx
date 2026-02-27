@@ -3,9 +3,10 @@ interface ProgressBarProps {
     progress: number;
     showLabel?: boolean;
     color?: string;
+    height?: number;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, showLabel = true, color }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, showLabel = true, color, height }) => {
     const safeProgress = Math.min(100, Math.max(0, progress));
 
     return (
@@ -16,7 +17,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, showLabel = 
                     <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{safeProgress}%</span>
                 </div>
             )}
-            <div className="progress-bar-container">
+            <div className="progress-bar-container" style={height ? { height: `${height}px` } : {}}>
                 <div
                     className="progress-bar-fill"
                     style={{

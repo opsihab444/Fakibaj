@@ -7,6 +7,10 @@ import { TopicsPage } from './pages/TopicsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AuthPage } from './pages/AuthPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { LeaderboardPage } from './pages/LeaderboardPage';
+import { PomodoroTimer } from './components/features/PomodoroTimer';
 import type { ReactNode } from 'react';
 
 // Protected Route wrapper — no full-page loading spinner
@@ -48,6 +52,10 @@ function AppRoutes() {
         <Route path="chapter/:chapterId" element={<TopicsPage />} />
         <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="leaderboard" element={<LeaderboardPage />} />
+        <Route path="pomodoro" element={<PomodoroTimer />} />
       </Route>
 
       {/* Catch all */}

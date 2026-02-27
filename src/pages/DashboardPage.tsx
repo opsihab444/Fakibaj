@@ -39,12 +39,21 @@ export const DashboardPage = () => {
         return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     };
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
         }, 1000);
-        return () => clearInterval(timer);
+
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener('resize', checkMobile);
+        };
     }, []);
 
     // Custom modern SVG icons
@@ -100,23 +109,22 @@ export const DashboardPage = () => {
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
             {/* Hero Header */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-                <div>
+            <header style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', gap: isMobile ? '1.5rem' : '0', marginBottom: '2rem' }}>
+                <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
                     <motion.div initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '99px', color: '#34d399', fontSize: '0.8rem', fontWeight: 600, marginBottom: '1rem', border: '1px solid rgba(16, 185, 129, 0.15)' }}
                     >
                         <Award size={14} /> এসএসসি ২০২৬ প্রস্তুতি ট্র্যাকার
                     </motion.div>
 
-                    <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', lineHeight: 1.3, letterSpacing: '-0.02em', color: 'white', fontWeight: 800 }}>
+                    <h1 style={{ fontSize: isMobile ? '2rem' : '2.5rem', marginBottom: '0.5rem', lineHeight: 1.3, letterSpacing: '-0.02em', color: 'white', fontWeight: 800 }}>
                         আপনার <span style={{ background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>অ্যানালিটিক্স</span>
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '550px', lineHeight: 1.7 }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '550px', lineHeight: 1.7, margin: isMobile ? '0 auto' : '0' }}>
                         আপনার সামগ্রিক শেখার অগ্রগতি ট্র্যাক করুন এবং আপনার যাত্রায় কী অর্জন করেছেন তা দেখুন।
                     </p>
                 </div>
 
-                {/* Futuristic Floating Day Counter */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -124,7 +132,7 @@ export const DashboardPage = () => {
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     style={{
                         position: 'relative',
-                        display: 'flex', alignItems: 'center', gap: '1.25rem',
+                        display: 'flex', alignItems: 'center', gap: '1.25rem', justifyContent: isMobile ? 'space-between' : 'flex-start',
                         padding: '1.25rem 1.5rem',
                         background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.02) 100%)',
                         border: '1px solid rgba(16, 185, 129, 0.15)',
@@ -226,12 +234,12 @@ export const DashboardPage = () => {
                 {/* Progress Banner */}
                 <motion.div variants={fadeUp} className="glass-card pattern-overlay"
                     style={{
-                        padding: '2rem 2.5rem',
+                        padding: isMobile ? '1.5rem' : '2rem 2.5rem',
                         background: 'linear-gradient(135deg, #022c22 0%, #064e3b 50%, #065f46 100%)',
                         boxShadow: '0 0 30px rgba(16, 185, 129, 0.08)'
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
                                 <Target color="#34d399" size={20} />
@@ -257,9 +265,9 @@ export const DashboardPage = () => {
                 </motion.div>
 
                 {/* Middle Grid: Chart + Side Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1.5rem' }}>
                     {/* Chart - Real Activity Data */}
-                    <motion.div variants={fadeUp} className="glass-panel" style={{ padding: '1.75rem 2rem' }}>
+                    <motion.div variants={fadeUp} className="glass-panel" style={{ flex: isMobile ? 'none' : 1.6, width: '100%', padding: isMobile ? '1.5rem' : '1.75rem 2rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                 <TrendingUp color="#10b981" size={20} />
@@ -305,7 +313,7 @@ export const DashboardPage = () => {
                     </motion.div>
 
                     {/* Side Stats Stack */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ flex: isMobile ? 'none' : 1, width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         {/* Streak Card */}
                         <motion.div variants={fadeUp} className="glass-panel pattern-overlay"
                             style={{
